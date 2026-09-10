@@ -1,7 +1,7 @@
 {
   "name": "@roamhq/grokbot",
   "version": "0.1.0",
-  "description": "Roam HQ channel plugin for Grok Bot: receive chat.message via a Grok routine and reply with the Roam API. No ngrok.",
+  "description": "Roam HQ (https://ro.am) channel plugin for Grok Bot: receive chat.message via a Grok routine and reply with the Roam API.",
   "type": "module",
   "bin": {
     "grokbot-roam": "dist/cli.js"
@@ -36,18 +36,22 @@
     "prepublishOnly": "npm run build"
   },
   "keywords": [
-    "roam",
+    "roam-hq",
+    "ro.am",
     "grok",
     "grokbot",
     "chat"
   ],
-  "author": "Wonder Inventions",
+  "author": {
+    "name": "Roam HQ",
+    "url": "https://ro.am"
+  },
   "license": "MIT",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/WonderInventions/grokbot-roam.git"
   },
-  "homepage": "https://github.com/WonderInventions/grokbot-roam",
+  "homepage": "https://developer.ro.am",
   "bugs": {
     "url": "https://github.com/WonderInventions/grokbot-roam/issues"
   },

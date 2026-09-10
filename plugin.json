@@ -3,9 +3,9 @@
   "name": "grok-roam",
   "description": "Roam HQ channel: receive chat.message via a Grok Bot webhook routine and reply with the Roam API. No ngrok.",
   "version": "0.1.0",
-  "author": { "name": "Wonder Inventions" },
+  "author": { "name": "Roam HQ", "url": "https://ro.am" },
   "license": "MIT",
-  "homepage": "https://www.npmjs.com/package/@roamhq/grokbot",
+  "homepage": "https://developer.ro.am",
   "repository": "https://github.com/WonderInventions/grokbot-roam",
-  "keywords": ["roam", "chat", "grok-bot"]
+  "keywords": ["roam-hq", "ro.am", "chat", "grok-bot"]
 }

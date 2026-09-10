@@ -1,7 +1,8 @@
 # @roamhq/grokbot
 
-Grok Bot **channel plugin** for [Roam HQ](https://ro.am) chat. People DM or
-@mention the bot inside Roam; the bot replies with the Roam API.
+Grok Bot **channel plugin** for [Roam HQ](https://ro.am) chat
+([developer docs](https://developer.ro.am)). People DM or @mention the bot
+inside Roam; the bot replies with the Roam API.
 
 Published as [`@roamhq/grokbot`](https://www.npmjs.com/package/@roamhq/grokbot)
 (bin: `grokbot-roam`).
