@@ -76,6 +76,8 @@ export type ChatPostOptions = {
   chatId: string;
   text: string;
   threadTimestamp?: number;
+  replyTimestamp?: number;
+  /** @deprecated Use replyTimestamp. Mapped if replyTimestamp is omitted. */
   replyTo?: number;
   markdown?: boolean;
   sync?: boolean;
@@ -214,8 +216,12 @@ export class RoamClient {
     if (opts.threadTimestamp !== undefined) {
       body.threadTimestamp = opts.threadTimestamp;
     }
-    if (opts.replyTo !== undefined) {
-      body.replyTo = opts.replyTo;
+    const replyTimestamp = opts.replyTimestamp ?? opts.replyTo;
+    if (opts.replyTimestamp !== undefined && opts.replyTo !== undefined && opts.replyTimestamp !== opts.replyTo) {
+      throw new Error("chatPost: replyTimestamp and replyTo disagree");
+    }
+    if (replyTimestamp !== undefined) {
+      body.replyTimestamp = replyTimestamp;
     }
     return this.request("POST", "/chat.post", body);
   }
@@ -233,11 +239,12 @@ export class RoamClient {
 
   async chatHistory(
     chatId: string,
-    opts: { limit?: number } = {},
+    opts: { limit?: number; threadTimestamp?: number } = {},
   ): Promise<Record<string, unknown>> {
     return this.request("GET", "/chat.history", undefined, {
       chatId,
       limit: opts.limit,
+      threadTimestamp: opts.threadTimestamp,
     });
   }
 

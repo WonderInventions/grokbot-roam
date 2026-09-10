@@ -53,13 +53,13 @@ If `action` is `reply`:
 npx grokbot-roam typing --chat-id <chatId> [--thread-timestamp <threadTimestamp>]
 ```
 
-2. Then post. Put your markdown answer in `--text`. Pass through `threadTimestamp` and `replyTo` from handle-wake. `textHint` is the inbound text with the bot mention stripped — use it as the user utterance.
+2. Then post. **Never interpolate markdown into a shell string** (no `--text "…"`, no heredoc). Write the answer with your file tool to a workspace path, then:
 
 ```
-npx grokbot-roam reply --chat-id <chatId> --text "<markdown>" [--thread-timestamp <N>] [--reply-to <N>]
+npx grokbot-roam reply --chat-id <chatId> --text-file /workspace/roam-reply.md [--thread-timestamp <N>] [--reply-to <N>]
 ```
 
-Do not call `send` for an inbound turn; `reply` is the one that sets `replyTo`.
+Pass through `threadTimestamp` and `replyTo` from handle-wake. `textHint` is the inbound text with the bot mention stripped. If `threadTimestamp` is set, fetch that thread with `history --thread-timestamp` before answering. Do not call `send` for an inbound turn; `reply` sets `replyTimestamp` on the inbound post.
 
 ## 4. Hard rules
 

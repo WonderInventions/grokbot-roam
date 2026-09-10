@@ -67,7 +67,7 @@ export function unwrapWebhookEnvelope(payload: unknown): Record<string, unknown>
 }
 
 function isGroup(chatType: string): boolean {
-  return chatType !== "dm";
+  return chatType === "group" || chatType === "channel";
 }
 
 function silence(reason: string): SilenceAction {
@@ -96,6 +96,11 @@ export function handleWake(
   if (root.type === "webhook.verification") {
     return silence("verification");
   }
+  if (typeof root.apiVersion === "string" && root.apiVersion && asRecord(root.data)) {
+    if (asString(root.type) !== "chat.message") {
+      return silence(`ignored_envelope:${asString(root.type) || "missing"}`);
+    }
+  }
 
   const event = unwrapWebhookEnvelope(root);
   const eventType = asString(event.type);
@@ -123,27 +128,34 @@ export function handleWake(
   if (identity.botId && userId === identity.botId) {
     return silence("self-echo");
   }
+  if (asString(event.userType) === "bot") {
+    return silence("bot_sender");
+  }
 
-  if (identity.kind === "pat" && identity.ownerId && userId !== identity.ownerId) {
-    return silence("not_owner");
+  if (identity.kind === "pat") {
+    if (!identity.ownerId || userId !== identity.ownerId) {
+      return silence("not_owner");
+    }
   }
 
   const chatType = asString(event.chatType);
+  if (chatType !== "dm" && chatType !== "group" && chatType !== "channel") {
+    return silence("unknown_chat_type");
+  }
   const text = asString(event.text);
   const requireMention = opts.requireMention === true;
-  if (requireMention && isGroup(chatType)) {
+  if (isGroup(chatType) && (requireMention || identity.kind === "pat")) {
     if (!identity.botId || !wasBotMentioned(text, identity.botId)) {
       return silence("mention_required");
     }
   }
 
   const inboundThread = asInt(event.threadTimestamp);
-  const threadTimestamp =
-    inboundThread !== undefined
+  const threadTimestamp = isGroup(chatType)
+    ? inboundThread !== undefined
       ? inboundThread
-      : isGroup(chatType)
-        ? timestamp
-        : undefined;
+      : timestamp
+    : undefined;
 
   const reply: ReplyAction = {
     action: "reply",

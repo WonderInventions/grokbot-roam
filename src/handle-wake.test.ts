@@ -184,7 +184,7 @@ describe("handleWake", () => {
     assert.equal(r.replyTo, 200);
   });
 
-  it("thread anchoring: DM with an inbound thread stays in that thread", () => {
+  it("never threads DMs even if threadTimestamp is present", () => {
     const r = handleWake(
       msg({
         chatType: "dm",
@@ -198,7 +198,57 @@ describe("handleWake", () => {
     if (r.action !== "reply") {
       return;
     }
-    assert.equal(r.threadTimestamp, 100);
+    assert.equal(r.threadTimestamp, undefined);
+  });
+
+  it("PAT without ownerId fails closed", () => {
+    const r = handleWake(msg({ userId: OWNER_ID, chatType: "dm" }), {
+      ...pat,
+      ownerId: null,
+    });
+    assert.deepEqual(r, { action: "silence", reason: "not_owner" });
+  });
+
+  it("PAT owner group messages require a mention", () => {
+    const r = handleWake(
+      msg({ chatType: "group", userId: OWNER_ID, text: "hello everyone" }),
+      pat,
+    );
+    assert.deepEqual(r, { action: "silence", reason: "mention_required" });
+  });
+
+  it("silences bot senders", () => {
+    const r = handleWake(msg({ userId: OTHER_ID, userType: "bot", chatType: "dm" }), org);
+    assert.deepEqual(r, { action: "silence", reason: "bot_sender" });
+  });
+
+  it("silences missing chatType", () => {
+    const r = handleWake(msg({ userId: OWNER_ID, chatType: "" }), pat);
+    assert.deepEqual(r, { action: "silence", reason: "unknown_chat_type" });
+  });
+
+  it("silences envelopes with missing type", () => {
+    const r = handleWake(
+      { apiVersion: "2026-07-07", data: msg({ userId: OWNER_ID, chatType: "dm" }) },
+      pat,
+    );
+    assert.deepEqual(r, { action: "silence", reason: "ignored_envelope:missing" });
+  });
+
+  it("silences non-chat.message envelopes", () => {
+    const r = handleWake(
+      { type: "meeting.ended", apiVersion: "2026-07-07", data: msg({ userId: OWNER_ID }) },
+      pat,
+    );
+    assert.deepEqual(r, { action: "silence", reason: "ignored_envelope:meeting.ended" });
+  });
+
+  it("does not treat a bare payload with apiVersion as an envelope", () => {
+    const r = handleWake(
+      msg({ userId: OWNER_ID, chatType: "dm", text: "yo", apiVersion: "2026-07-07", type: "message" }),
+      pat,
+    );
+    assert.equal(r.action, "reply");
   });
 
   it("accepts the v1 envelope", () => {
