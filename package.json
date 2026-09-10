@@ -1,0 +1,55 @@
+{
+  "name": "grokbot-roam",
+  "version": "0.1.0",
+  "description": "Roam HQ channel plugin for Grok Bot: receive chat.message via a Grok routine and reply with the Roam API. No ngrok.",
+  "type": "module",
+  "bin": {
+    "grokbot-roam": "dist/cli.js"
+  },
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "!dist/**/*.test.js",
+    "!dist/**/*.test.d.ts",
+    "!dist/**/*.test.js.map",
+    "plugin.json",
+    "skills",
+    "README.md",
+    "LICENSE"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "build": "tsc",
+    "test": "tsc && node --test dist/markdown.test.js dist/handle-wake.test.js dist/subscribe.test.js",
+    "prepare": "tsc"
+  },
+  "keywords": [
+    "roam",
+    "grok",
+    "grokbot",
+    "chat"
+  ],
+  "author": "Wonder Inventions",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/WonderInventions/grokbot-roam.git"
+  },
+  "homepage": "https://github.com/WonderInventions/grokbot-roam",
+  "bugs": {
+    "url": "https://github.com/WonderInventions/grokbot-roam/issues"
+  },
+  "devDependencies": {
+    "@types/node": "^22.15.0",
+    "typescript": "^5.8.0"
+  }
+}
