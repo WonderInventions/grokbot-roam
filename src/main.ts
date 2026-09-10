@@ -23,12 +23,14 @@ Usage:
   grokbot-roam configure --token rmp-…|rmk-… [--base-url https://api.ro.am/v1]
   grokbot-roam status
   grokbot-roam subscribe --url <grokRoutineUrl> --token <grokSenderKey>
-                         [--event chat.message] [--mention] [--chat-type dm|group]
+                         [--event chat.message] [--mention | --no-mention]
+                         [--chat-type dm|group]
   grokbot-roam unsubscribe --id <uuid>
-  grokbot-roam reply --chat-id <uuid> --text <md> [--thread-timestamp N] [--reply-to N]
-  grokbot-roam send --chat-id <uuid> --text <md> [--thread-timestamp N]
+  grokbot-roam reply --chat-id <uuid> [--text <md> | --text - | --text-file <path>]
+                     [--thread-timestamp N] [--reply-to N]
+  grokbot-roam send --chat-id <uuid> [--text <md> | --text - | --text-file <path>] [--thread-timestamp N]
   grokbot-roam typing --chat-id <uuid> [--thread-timestamp N]
-  grokbot-roam history --chat-id <uuid> [--limit N]
+  grokbot-roam history --chat-id <uuid> [--limit N] [--thread-timestamp N]
   grokbot-roam handle-wake
 
 Config: ~/.grokbot-roam/config.json (mode 0600). Tokens are never logged.
@@ -67,8 +69,12 @@ function intFlag(value: string | undefined, name: string): number | undefined {
   if (value === undefined) {
     return undefined;
   }
-  const n = Number(value);
-  if (!Number.isFinite(n)) {
+  const trimmed = value.trim();
+  if (!/^-?\d+$/.test(trimmed)) {
+    fail(`${name} must be an integer`);
+  }
+  const n = Number(trimmed);
+  if (!Number.isSafeInteger(n)) {
     fail(`${name} must be an integer`);
   }
   return n;
@@ -144,7 +150,8 @@ async function cmdSubscribe(argv: string[]): Promise<void> {
     url: { type: "string" },
     token: { type: "string" },
     event: { type: "string" },
-    mention: { type: "boolean", default: false },
+    mention: { type: "boolean" },
+    "no-mention": { type: "boolean" },
     "chat-type": { type: "string" },
   });
   if (!flags.url) {
@@ -153,17 +160,39 @@ async function cmdSubscribe(argv: string[]): Promise<void> {
   if (!flags.token) {
     fail("subscribe requires --token <grokSenderKey>");
   }
-  const chatType = flags["chat-type"];
+  if (flags.mention && flags["no-mention"]) {
+    fail("subscribe: use --mention or --no-mention, not both");
+  }
+  let chatType = flags["chat-type"];
   if (chatType && chatType !== "dm" && chatType !== "group") {
     fail("--chat-type must be dm or group");
   }
   const config = loadConfig();
   const client = clientFromConfig(config);
+  let identity = config.identity;
+  if (!identity) {
+    try {
+      identity = identityFromTokenInfo(await client.tokenInfo());
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      fail(`token.info failed: ${msg}`, config.token);
+    }
+  }
+  // PAT: DMs only unless the operator opts into group. Do not put
+  // {mention:true} on the server filter — that AND-drops DMs that are not
+  // @-mentions. Group mention gating is handle-wake's job.
+  if (!chatType && identity.kind === "pat") {
+    chatType = "dm";
+  }
+  const requireMention =
+    flags["no-mention"] === true ? false : flags.mention === true || identity.kind === "org";
   const opts: SubscribeOptions = {
     url: flags.url,
     grokToken: flags.token,
     event: flags.event ?? "chat.message",
-    mention: flags.mention === true,
+    // Server mention filter AND-drops DMs. Only send it for group-only
+    // subscriptions. Mixed org defaults still gate groups in handle-wake.
+    mention: requireMention && chatType === "group",
     chatType: chatType as "dm" | "group" | undefined,
   };
   let result: Record<string, unknown>;
@@ -173,7 +202,7 @@ async function cmdSubscribe(argv: string[]): Promise<void> {
     const msg = err instanceof Error ? err.message : String(err);
     fail(`webhook.subscribe failed: ${msg}`, flags.token);
   }
-  saveConfig({ ...config, requireMention: flags.mention === true });
+  saveConfig({ ...config, identity, requireMention });
   printJson(redactDestinationToken(result));
 }
 
@@ -210,24 +239,40 @@ async function cmdReply(argv: string[], kind: "reply" | "send"): Promise<void> {
   const flags = parseFlags(argv, {
     "chat-id": { type: "string" },
     text: { type: "string" },
+    "text-file": { type: "string" },
     "thread-timestamp": { type: "string" },
     "reply-to": { type: "string" },
   });
   if (!flags["chat-id"]) {
     fail(`${kind} requires --chat-id <uuid>`);
   }
-  if (flags.text === undefined) {
-    fail(`${kind} requires --text <md>`);
+  if (flags.text !== undefined && flags["text-file"]) {
+    fail(`${kind}: use --text or --text-file, not both`);
+  }
+  let rawText: string | undefined;
+  if (flags["text-file"]) {
+    const { readFileSync } = await import("node:fs");
+    rawText = readFileSync(flags["text-file"], "utf8");
+  } else if (flags.text === "-") {
+    rawText = (await readStdin()).replace(/\s+$/, "");
+  } else {
+    rawText = flags.text;
+  }
+  if (rawText === undefined) {
+    fail(`${kind} requires --text <md>, --text -, or --text-file <path>`);
+  }
+  if (!rawText) {
+    fail(`${kind} requires non-empty markdown`);
   }
   const config = loadConfig();
   const client = clientFromConfig(config);
-  const text = expandSoftBreaks(flags.text);
+  const text = expandSoftBreaks(rawText);
   try {
     const result = await client.chatPost({
       chatId: flags["chat-id"],
       text,
       threadTimestamp: intFlag(flags["thread-timestamp"], "--thread-timestamp"),
-      replyTo: kind === "reply" ? intFlag(flags["reply-to"], "--reply-to") : undefined,
+      replyTimestamp: kind === "reply" ? intFlag(flags["reply-to"], "--reply-to") : undefined,
     });
     printJson(result);
   } catch (err) {
@@ -261,6 +306,7 @@ async function cmdHistory(argv: string[]): Promise<void> {
   const flags = parseFlags(argv, {
     "chat-id": { type: "string" },
     limit: { type: "string" },
+    "thread-timestamp": { type: "string" },
   });
   if (!flags["chat-id"]) {
     fail("history requires --chat-id <uuid>");
@@ -270,6 +316,7 @@ async function cmdHistory(argv: string[]): Promise<void> {
   try {
     const result = await client.chatHistory(flags["chat-id"], {
       limit: intFlag(flags.limit, "--limit"),
+      threadTimestamp: intFlag(flags["thread-timestamp"], "--thread-timestamp"),
     });
     printJson(result);
   } catch (err) {
@@ -308,15 +355,19 @@ async function cmdHandleWake(): Promise<void> {
     fail(msg);
   }
 
-  const client = clientFromConfig(config);
-  let identity: Identity;
-  try {
-    identity = identityFromTokenInfo(await client.tokenInfo());
-  } catch (err) {
-    const msg = err instanceof Error ? err.message : String(err);
-    fail(`token.info failed: ${msg}`, config.token);
+  let identity = config.identity;
+  if (!identity) {
+    const client = clientFromConfig(config);
+    try {
+      identity = identityFromTokenInfo(await client.tokenInfo());
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      printJson({ action: "silence", reason: `token.info_failed` });
+      console.error(redact(`token.info failed: ${msg}`, config.token));
+      return;
+    }
+    saveConfig({ ...config, identity });
   }
-  saveConfig({ ...config, identity });
 
   const action = handleWake(payload, identity, {
     requireMention: shouldRequireMention(config, identity),

@@ -6,6 +6,8 @@ import {
   ROAM_API_VERSION,
   type FetchLike,
 } from "./client.js";
+import { shouldRequireMention, type Config } from "./config.js";
+import type { Identity } from "./identity.js";
 
 describe("buildSubscribeBody", () => {
   it("posts grok_bot destination with apiVersion and mention filter", () => {
@@ -82,6 +84,55 @@ describe("RoamClient.webhookSubscribe", () => {
       apiVersion: "2026-07-07",
       destination: { type: "grok_bot", token: "sender-key" },
       filter: { mention: true, chatType: "group" },
+    });
+  });
+});
+
+describe("shouldRequireMention", () => {
+  const org: Identity = {
+    kind: "org",
+    botId: "b",
+    botName: "Bot",
+    ownerId: null,
+    ownerName: null,
+    ownerEmail: null,
+    scopes: [],
+  };
+  const pat: Identity = { ...org, kind: "pat", ownerId: "o" };
+  const base: Config = { token: "rmk-x", baseUrl: "https://api.ro.am/v1" };
+
+  it("defaults org to true and PAT to false when unset", () => {
+    assert.equal(shouldRequireMention(base, org), true);
+    assert.equal(shouldRequireMention(base, pat), false);
+  });
+
+  it("honors an explicit config flag", () => {
+    assert.equal(shouldRequireMention({ ...base, requireMention: false }, org), false);
+    assert.equal(shouldRequireMention({ ...base, requireMention: true }, pat), true);
+  });
+});
+
+describe("RoamClient.chatPost", () => {
+  it("sends replyTimestamp not replyTo", async () => {
+    const bodies: unknown[] = [];
+    const fetchMock: FetchLike = async (_input, init) => {
+      bodies.push(JSON.parse(String(init?.body)));
+      return new Response("{}", { status: 200, headers: { "content-type": "application/json" } });
+    };
+    const client = new RoamClient({ token: "rmk-test", fetch: fetchMock });
+    await client.chatPost({
+      chatId: "c1",
+      text: "hi",
+      threadTimestamp: 10,
+      replyTimestamp: 9,
+    });
+    assert.deepEqual(bodies[0], {
+      chatId: "c1",
+      text: "hi",
+      markdown: true,
+      sync: true,
+      threadTimestamp: 10,
+      replyTimestamp: 9,
     });
   });
 });
