@@ -12,7 +12,7 @@ description: >
 Two hops, no ngrok. Grok Bot's VM is outbound-only.
 
 1. **Roam appserver** delivers `chat.message` to this Bot's **routine URL**.
-2. The woken Bot calls `npx grokbot-roam` to filter the event and reply via the Roam API.
+2. The woken Bot calls `npx @roamhq/grokbot` to filter the event and reply via the Roam API.
 
 Never start a public HTTP webhook server. Never echo tokens, PATs, API keys, or Grok sender keys.
 
@@ -30,7 +30,7 @@ Request it as a secret. Do not print it back, do not put it in a routine prompt,
 ## 2. Configure
 
 ```
-npx grokbot-roam configure --token <token>
+npx @roamhq/grokbot configure --token <token>
 ```
 
 Optional: `--base-url https://api.ro.am/v1` (the default).
@@ -38,7 +38,7 @@ Optional: `--base-url https://api.ro.am/v1` (the default).
 ## 3. Status — PAT vs org
 
 ```
-npx grokbot-roam status
+npx @roamhq/grokbot status
 ```
 
 Report which kind came back:
@@ -59,14 +59,14 @@ Ask the operator to paste the **routine URL** and **sender key** from the routin
 ## 6. Subscribe
 
 ```
-npx grokbot-roam subscribe --url <grokRoutineUrl> --token <grokSenderKey>
+npx @roamhq/grokbot subscribe --url <grokRoutineUrl> --token <grokSenderKey>
 ```
 
 - **Org default:** add `--mention` so group traffic is @-only.
 - Optional: `--chat-type dm` or `--chat-type group`.
 - Optional: `--event chat.message` (the default).
 
-Keep the printed subscription `id`. Unsubscribe later with `npx grokbot-roam unsubscribe --id <uuid>`.
+Keep the printed subscription `id`. Unsubscribe later with `npx @roamhq/grokbot unsubscribe --id <uuid>`.
 
 ## 7. Org: add the bot to groups
 
@@ -75,7 +75,7 @@ If this is an **organization** token, tell the operator to add the bot under the
 ## 8. Verify
 
 1. Pick a `chat-id` (a DM with the bot, or a group it belongs to).
-2. `npx grokbot-roam send --chat-id <uuid> --text "grokbot-roam is connected"`
+2. `npx @roamhq/grokbot send --chat-id <uuid> --text "grokbot-roam is connected"`
 3. Then a real DM (PAT) or @mention in the group (org). The routine should typing-then-reply.
 
 If nothing comes back: re-run `status`, confirm the subscribe `id` exists, and for org confirm the bot is a group member plus `--mention` if that was set.

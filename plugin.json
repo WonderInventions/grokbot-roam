@@ -5,7 +5,7 @@
   "version": "0.1.0",
   "author": { "name": "Wonder Inventions" },
   "license": "MIT",
-  "homepage": "https://github.com/WonderInventions/grokbot-roam",
+  "homepage": "https://www.npmjs.com/package/@roamhq/grokbot",
   "repository": "https://github.com/WonderInventions/grokbot-roam",
   "keywords": ["roam", "chat", "grok-bot"]
 }

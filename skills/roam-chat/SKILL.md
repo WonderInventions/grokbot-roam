@@ -8,7 +8,7 @@ description: >
 
 # Roam inbound routine
 
-You woke because Roam delivered a `chat.message` to this Bot's routine URL. The VM is outbound-only. Talk back with `npx grokbot-roam`. Never echo tokens. Never start extra routines.
+You woke because Roam delivered a `chat.message` to this Bot's routine URL. The VM is outbound-only. Talk back with `npx @roamhq/grokbot`. Never echo tokens. Never start extra routines.
 
 ## 1. Parse the body
 
@@ -25,7 +25,7 @@ or the bare `data` object (`chatId`, `userId`, `timestamp`, `text`, `chatType`, 
 Pipe the JSON to handle-wake (preferred) or apply the same rules yourself:
 
 ```
-npx grokbot-roam handle-wake
+npx @roamhq/grokbot handle-wake
 ```
 
 Stdin = the webhook JSON. Stdout = one JSON object:
@@ -50,13 +50,13 @@ If `action` is `reply`:
 1. Typing (best-effort; ignore failures):
 
 ```
-npx grokbot-roam typing --chat-id <chatId> [--thread-timestamp <threadTimestamp>]
+npx @roamhq/grokbot typing --chat-id <chatId> [--thread-timestamp <threadTimestamp>]
 ```
 
 2. Then post. **Never interpolate markdown into a shell string** (no `--text "…"`, no heredoc). Write the answer with your file tool to a workspace path, then:
 
 ```
-npx grokbot-roam reply --chat-id <chatId> --text-file /workspace/roam-reply.md [--thread-timestamp <N>] [--reply-to <N>]
+npx @roamhq/grokbot reply --chat-id <chatId> --text-file /workspace/roam-reply.md [--thread-timestamp <N>] [--reply-to <N>]
 ```
 
 Pass through `threadTimestamp` and `replyTo` from handle-wake. `textHint` is the inbound text with the bot mention stripped. If `threadTimestamp` is set, fetch that thread with `history --thread-timestamp` before answering. Do not call `send` for an inbound turn; `reply` sets `replyTimestamp` on the inbound post.

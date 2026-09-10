@@ -1,7 +1,10 @@
-# grokbot-roam
+# @roamhq/grokbot
 
 Grok Bot **channel plugin** for [Roam HQ](https://ro.am) chat. People DM or
 @mention the bot inside Roam; the bot replies with the Roam API.
+
+Published as [`@roamhq/grokbot`](https://www.npmjs.com/package/@roamhq/grokbot)
+(bin: `grokbot-roam`).
 
 This is **not** a public HTTP webhook server. Grok Bot's VM is outbound-only.
 There is no ngrok.
@@ -12,8 +15,8 @@ There is no ngrok.
 Roam chat  --chat.message-->  appserver  --routine URL-->  Grok Bot
                                                          |
                                                          v
-                                              npx grokbot-roam handle-wake
-                                              npx grokbot-roam typing / reply
+                                              npx @roamhq/grokbot handle-wake
+                                              npx @roamhq/grokbot typing / reply
                                                          |
                                                          v
                                               POST https://api.ro.am/v1/chat.post
@@ -24,9 +27,15 @@ Roam chat  --chat.message-->  appserver  --routine URL-->  Grok Bot
 2. **This package** is hop 3: after Grok wakes, the Bot calls this CLI to
    filter the event and talk back to Roam.
 
-## Install (Grok Bot)
+## Install
 
-In a Grok Bot conversation:
+```sh
+npm install -g @roamhq/grokbot
+# or: npx @roamhq/grokbot <command>
+```
+
+In a Grok Bot conversation you can still install from GitHub (skills + MCP
+layout) and then use the published CLI:
 
 ```
 Install this Roam plugin https://github.com/WonderInventions/grokbot-roam
@@ -50,16 +59,16 @@ skill is the prompt for that routine.
 Config: `~/.grokbot-roam/config.json` (mode `0600`). Tokens are never logged.
 
 ```
-npx grokbot-roam configure --token rmp-…|rmk-… [--base-url https://api.ro.am/v1]
-npx grokbot-roam status
-npx grokbot-roam subscribe --url <grokRoutineUrl> --token <grokSenderKey>
+npx @roamhq/grokbot configure --token rmp-…|rmk-… [--base-url https://api.ro.am/v1]
+npx @roamhq/grokbot status
+npx @roamhq/grokbot subscribe --url <grokRoutineUrl> --token <grokSenderKey>
                            [--event chat.message] [--mention] [--chat-type dm|group]
-npx grokbot-roam unsubscribe --id <uuid>
-npx grokbot-roam reply --chat-id <uuid> --text <md> [--thread-timestamp N] [--reply-to N]
-npx grokbot-roam send --chat-id <uuid> --text <md> [--thread-timestamp N]
-npx grokbot-roam typing --chat-id <uuid> [--thread-timestamp N]
-npx grokbot-roam history --chat-id <uuid> [--limit N]
-npx grokbot-roam handle-wake    # webhook JSON on stdin → {action: reply|silence, …}
+npx @roamhq/grokbot unsubscribe --id <uuid>
+npx @roamhq/grokbot reply --chat-id <uuid> --text-file <path> [--thread-timestamp N] [--reply-to N]
+npx @roamhq/grokbot send --chat-id <uuid> --text-file <path> [--thread-timestamp N]
+npx @roamhq/grokbot typing --chat-id <uuid> [--thread-timestamp N]
+npx @roamhq/grokbot history --chat-id <uuid> [--limit N] [--thread-timestamp N]
+npx @roamhq/grokbot handle-wake    # webhook JSON on stdin → {action: reply|silence, …}
 ```
 
 `subscribe` POSTs `/v1/webhook.subscribe` with `destination: { type: "grok_bot", token }`
@@ -79,6 +88,22 @@ npm install
 npm test
 npm run build
 ```
+
+## Releasing
+
+Publishes from GitHub Actions on `release: published` using npm
+[trusted publishing](https://docs.npmjs.com/trusted-publishers) (OIDC) with
+provenance — no npm tokens in the repo.
+
+1. Land the version bump on `master` (`package.json` / `plugin.json` `version`).
+2. Create a GitHub Release whose tag is `v` + that version (e.g. `v0.1.0`).
+3. The **release** workflow (environment `npm-publish`, `master` / `v*` only)
+   re-runs tests, checks the tag matches, and runs
+   `npm publish --provenance --access public`.
+4. Confirm https://www.npmjs.com/package/@roamhq/grokbot shows provenance.
+
+First publish also needs an npm trusted-publisher entry for this repo +
+`release.yml` on the `@roamhq` org (same as `@roamhq/openclaw-roam`).
 
 ## License
 

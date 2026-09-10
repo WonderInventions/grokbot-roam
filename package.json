@@ -1,10 +1,13 @@
 {
-  "name": "grokbot-roam",
+  "name": "@roamhq/grokbot",
   "version": "0.1.0",
   "description": "Roam HQ channel plugin for Grok Bot: receive chat.message via a Grok routine and reply with the Roam API. No ngrok.",
   "type": "module",
   "bin": {
     "grokbot-roam": "dist/cli.js"
+  },
+  "publishConfig": {
+    "access": "public"
   },
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -30,7 +33,7 @@
   "scripts": {
     "build": "tsc",
     "test": "tsc && node --test dist/markdown.test.js dist/handle-wake.test.js dist/subscribe.test.js",
-    "prepare": "tsc"
+    "prepublishOnly": "npm run build"
   },
   "keywords": [
     "roam",
