@@ -32,7 +32,7 @@
   },
   "scripts": {
     "build": "tsc",
-    "test": "tsc && node --test dist/markdown.test.js dist/handle-wake.test.js dist/subscribe.test.js",
+    "test": "tsc && node --test dist/markdown.test.js dist/handle-wake.test.js dist/subscribe.test.js dist/onboard.test.js",
     "prepublishOnly": "npm run build"
   },
   "keywords": [

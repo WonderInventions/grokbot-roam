@@ -30,21 +30,22 @@ Roam chat  --chat.message-->  appserver  --routine URL-->  Grok Bot
 
 ## Install
 
-```sh
-npm install -g @roamhq/grokbot
-# or: npx @roamhq/grokbot <command>
-```
-
-In a Grok Bot conversation you can still install from GitHub (skills + MCP
-layout) and then use the published CLI:
+In Grok Bot, one message:
 
 ```
-Install this Roam plugin https://github.com/WonderInventions/grokbot-roam
+Install this Roam plugin https://github.com/WonderInventions/grokbot-roam then connect Roam
 ```
 
-The **roam-channel** skill is the installer playbook (secret-request a token,
-`configure`, `status`, one inbound routine, `subscribe`). The **roam-chat**
-skill is the prompt for that routine.
+That’s it. The **roam-channel** skill secret-requests a Roam token, creates one
+webhook routine, and subscribes. You paste a PAT (`rmp-…`) or API key (`rmk-…`),
+then the routine URL + sender key from the routine panel if the Bot cannot read
+them.
+
+Or dump the same playbook into the session:
+
+```
+npx @roamhq/grokbot@latest onboard
+```
 
 ## Personal vs organization
 
