@@ -43,6 +43,16 @@ describe("buildSubscribeBody", () => {
     });
     assert.deepEqual(body.filter, { chatType: "dm" });
   });
+
+  it("includes self for the PAT bot DM", () => {
+    const body = buildSubscribeBody({
+      url: "https://grok.example/routine/abc",
+      grokToken: "sender-key",
+      chatType: "dm",
+      self: true,
+    });
+    assert.deepEqual(body.filter, { chatType: "dm", self: true });
+  });
 });
 
 describe("RoamClient.webhookSubscribe", () => {
