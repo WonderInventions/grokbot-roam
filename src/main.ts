@@ -15,11 +15,13 @@ import { handleWake } from "./handle-wake.js";
 import { identityFromTokenInfo, type Identity } from "./identity.js";
 import { expandSoftBreaks } from "./markdown.js";
 import { redact } from "./redact.js";
+import { onboardPlaybook } from "./onboard.js";
 import { packageVersion, userAgent } from "./version.js";
 
 const USAGE = `grokbot-roam ${packageVersion()} — Roam HQ channel for Grok Bot
 
 Usage:
+  grokbot-roam onboard
   grokbot-roam configure --token rmp-…|rmk-… [--base-url https://api.ro.am/v1]
   grokbot-roam status
   grokbot-roam subscribe --url <grokRoutineUrl> --token <grokSenderKey>
@@ -388,6 +390,9 @@ export async function main(argv = process.argv.slice(2)): Promise<number> {
 
   try {
     switch (cmd) {
+      case "onboard":
+        process.stdout.write(onboardPlaybook());
+        return 0;
       case "configure":
         await cmdConfigure(argv.slice(1));
         return 0;
