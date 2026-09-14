@@ -1,6 +1,6 @@
 {
   "name": "@roamhq/grokbot",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Roam HQ (https://ro.am) channel plugin for Grok Bot: receive chat.message via a Grok routine and reply with the Roam API.",
   "type": "module",
   "bin": {
