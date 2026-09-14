@@ -180,12 +180,13 @@ async function cmdSubscribe(argv: string[]): Promise<void> {
       fail(`token.info failed: ${msg}`, config.token);
     }
   }
-  // PAT: DMs only unless the operator opts into group. Do not put
-  // {mention:true} on the server filter — that AND-drops DMs that are not
-  // @-mentions. Group mention gating is handle-wake's job.
+  // PAT default: only the {bot, owner} self-DM. {chatType: dm} would also
+  // deliver the owner's DMs with other people — Grok must never see those.
   if (!chatType && identity.kind === "pat") {
     chatType = "dm";
   }
+  const self =
+    identity.kind === "pat" && (chatType === undefined || chatType === "dm");
   const requireMention =
     flags["no-mention"] === true ? false : flags.mention === true || identity.kind === "org";
   const opts: SubscribeOptions = {
@@ -196,6 +197,7 @@ async function cmdSubscribe(argv: string[]): Promise<void> {
     // subscriptions. Mixed org defaults still gate groups in handle-wake.
     mention: requireMention && chatType === "group",
     chatType: chatType as "dm" | "group" | undefined,
+    self,
   };
   let result: Record<string, unknown>;
   try {

@@ -89,6 +89,8 @@ export type SubscribeOptions = {
   event?: string;
   mention?: boolean;
   chatType?: "dm" | "group";
+  /** Only the app's own 1:1 DM ({bot, owner} for a PAT). */
+  self?: boolean;
 };
 
 export function buildSubscribeBody(opts: SubscribeOptions): Record<string, unknown> {
@@ -104,6 +106,9 @@ export function buildSubscribeBody(opts: SubscribeOptions): Record<string, unkno
   }
   if (opts.chatType) {
     filter.chatType = opts.chatType;
+  }
+  if (opts.self) {
+    filter.self = true;
   }
   if (Object.keys(filter).length > 0) {
     body.filter = filter;
