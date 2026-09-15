@@ -10,6 +10,8 @@ describe("onboardPlaybook", () => {
     assert.match(text, /npx @roamhq\/grokbot subscribe/);
     assert.match(text, /handle-wake/);
     assert.match(text, /--text-file/);
+    assert.match(text, /--download-dir/);
+    assert.match(text, /--asset-id/);
     assert.match(text, /roam-chat/);
   });
 });

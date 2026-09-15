@@ -201,6 +201,65 @@ describe("handleWake", () => {
     assert.equal(r.threadTimestamp, undefined);
   });
 
+  it("surfaces photo and blob items on the reply action", () => {
+    const items = [
+      {
+        id: "dddddddd-dddd-4ddd-8ddd-dddddddddddd",
+        type: "photo",
+        name: "shot.png",
+        mime: "image/png",
+        url: "https://cdn.example/shot.png",
+        thumbnail: "https://cdn.example/shot-thumb.png",
+        size: 1234,
+      },
+      {
+        id: "eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee",
+        type: "blob",
+        name: "notes.pdf",
+        mime: "application/octet-stream",
+        url: "https://cdn.example/notes.pdf",
+        size: 999,
+      },
+    ];
+    const r = handleWake(
+      msg({ userId: OWNER_ID, chatType: "dm", text: "see these", items }),
+      pat,
+    );
+    assert.equal(r.action, "reply");
+    if (r.action !== "reply") {
+      return;
+    }
+    assert.equal(r.textHint, "see these");
+    assert.equal(r.items?.length, 2);
+    assert.equal(r.items?.[0]?.type, "photo");
+    assert.equal(r.items?.[1]?.name, "notes.pdf");
+  });
+
+  it("wakes on an image-only message", () => {
+    const r = handleWake(
+      msg({
+        userId: OWNER_ID,
+        chatType: "dm",
+        text: "",
+        items: [
+          {
+            id: "dddddddd-dddd-4ddd-8ddd-dddddddddddd",
+            type: "photo",
+            name: "shot.png",
+            url: "https://cdn.example/shot.png",
+          },
+        ],
+      }),
+      pat,
+    );
+    assert.equal(r.action, "reply");
+    if (r.action !== "reply") {
+      return;
+    }
+    assert.equal(r.textHint, "");
+    assert.equal(r.items?.[0]?.name, "shot.png");
+  });
+
   it("PAT without ownerId fails closed", () => {
     const r = handleWake(msg({ userId: OWNER_ID, chatType: "dm" }), {
       ...pat,

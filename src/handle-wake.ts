@@ -1,4 +1,5 @@
 import type { Identity } from "./identity.js";
+import { parseWakeItems, type WakeItem } from "./items.js";
 import { stripBotMention, wasBotMentioned } from "./markdown.js";
 
 export type SilenceAction = {
@@ -12,6 +13,7 @@ export type ReplyAction = {
   threadTimestamp?: number;
   replyTo?: number;
   textHint: string;
+  items?: WakeItem[];
 };
 
 export type WakeAction = SilenceAction | ReplyAction;
@@ -165,6 +167,10 @@ export function handleWake(
   };
   if (threadTimestamp !== undefined) {
     reply.threadTimestamp = threadTimestamp;
+  }
+  const items = parseWakeItems(event.items);
+  if (items.length) {
+    reply.items = items;
   }
   return reply;
 }
