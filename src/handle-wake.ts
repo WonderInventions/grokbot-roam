@@ -14,6 +14,10 @@ export type ReplyAction = {
   replyTo?: number;
   textHint: string;
   items?: WakeItem[];
+  /** `chat.history` body for this DM, or this group thread. */
+  history?: Record<string, unknown>;
+  /** Set when history fetch failed; still reply. */
+  historyError?: string;
 };
 
 export type WakeAction = SilenceAction | ReplyAction;
@@ -22,6 +26,40 @@ export type HandleWakeOptions = {
   /** In group chats, only reply when the bot is @-mentioned. */
   requireMention?: boolean;
 };
+
+/** Recent messages attached to every reply wake (API default is 10, max 200). */
+export const WAKE_HISTORY_LIMIT = 50;
+
+export type ChatHistoryFn = (
+  chatId: string,
+  opts: { limit?: number; threadTimestamp?: number; expand?: string },
+) => Promise<Record<string, unknown>>;
+
+/**
+ * Fetch `chat.history` for a reply wake so the Bot sees this DM or thread,
+ * not only the inbound message. Failures are recorded on the action; the
+ * wake still replies.
+ */
+export async function attachChatHistory(
+  action: WakeAction,
+  chatHistory: ChatHistoryFn,
+  opts: { limit?: number } = {},
+): Promise<WakeAction> {
+  if (action.action !== "reply") {
+    return action;
+  }
+  try {
+    const history = await chatHistory(action.chatId, {
+      limit: opts.limit ?? WAKE_HISTORY_LIMIT,
+      threadTimestamp: action.threadTimestamp,
+      expand: "addresses",
+    });
+    return { ...action, history };
+  } catch (err) {
+    const historyError = err instanceof Error ? err.message : String(err);
+    return { ...action, historyError };
+  }
+}
 
 function asRecord(value: unknown): Record<string, unknown> | null {
   return value !== null && typeof value === "object" && !Array.isArray(value)

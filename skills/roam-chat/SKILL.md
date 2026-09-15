@@ -31,7 +31,7 @@ npx @roamhq/grokbot handle-wake --download-dir /workspace/roam-in/<timestamp>
 Stdin = the webhook JSON. Stdout = one JSON object:
 
 - `{ "action": "silence", "reason": "…" }` — **do nothing**. Do not post. Do not typing.
-- `{ "action": "reply", "chatId", "threadTimestamp", "replyTo", "textHint", "items?" }` — answer.
+- `{ "action": "reply", "chatId", "threadTimestamp", "replyTo", "textHint", "items?", "history?", "historyError?" }` — answer.
 
 Drop (silence) when:
 
@@ -42,6 +42,12 @@ Drop (silence) when:
 - mention required: group message without `<@botUuid>`
 
 `threadTimestamp` is the inbound thread, or for groups the inbound `timestamp` so the reply starts a thread.
+
+`history` is `chat.history` for this DM, or this group thread (recent messages, plus `addresses` when present). **Read it before answering.** Do not skip it. If `historyError` is set, fall back to:
+
+```
+npx @roamhq/grokbot history --chat-id <chatId> [--thread-timestamp <threadTimestamp>]
+```
 
 ## 3. Reply
 
@@ -59,7 +65,7 @@ npx @roamhq/grokbot typing --chat-id <chatId> [--thread-timestamp <threadTimesta
 npx @roamhq/grokbot reply --chat-id <chatId> --text-file /workspace/roam-reply.md [--thread-timestamp <N>] [--reply-to <N>]
 ```
 
-Pass through `threadTimestamp` and `replyTo` from handle-wake. `textHint` is the inbound text with the bot mention stripped — it may be empty if the user only sent a file. If `items` is present, open each `localPath` (look at photos; read blobs) before answering. If `threadTimestamp` is set, fetch that thread with `history --thread-timestamp` before answering.
+Pass through `threadTimestamp` and `replyTo` from handle-wake. `textHint` is the inbound text with the bot mention stripped — it may be empty if the user only sent a file. If `items` is present, open each `localPath` (look at photos; read blobs) before answering.
 
 To send an image or file back: write it to disk, then:
 
@@ -70,7 +76,16 @@ npx @roamhq/grokbot reply --chat-id <chatId> --text-file /workspace/roam-reply.m
 
 `upload` prints `{ "assetId": "…" }`. Repeat `--asset-id` for multiple files. Caption via `--text-file` may be omitted only when there is at least one `--asset-id`. Do not call `send` for an inbound turn; `reply` sets `replyTimestamp` on the inbound post.
 
-## 4. Hard rules
+## 4. Meetings and reactions (Roam MCP, not grokbot-roam)
+
+The roam MCP server was added at connect (`https://api.ro.am/mcp`, same token). Use those tools from this routine. Do not curl the Roam API. Do not add meeting or reaction flags to grokbot-roam.
+
+- Meetings / transcripts / "what did we decide": `meeting_search`, `meeting_info`, `meeting_transcript`, `meeting_prompt`.
+- Add, list, or remove an emoji reaction: `reaction_add`, `reaction_list`, `reaction_remove`. Never post a reaction as a chat message.
+
+If those tools are missing, add the custom MCP server again with header `Authorization: Bearer <token>` (the token already in grokbot-roam config — secret-request, never echo).
+
+## 5. Hard rules
 
 - If silence, stop.
 - Never print, log, or include in a message: Roam tokens (`rmp-` / `rmk-`), Grok sender keys, or config.json.

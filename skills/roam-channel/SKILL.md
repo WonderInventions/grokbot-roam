@@ -8,14 +8,14 @@ description: >
 
 # Connect Roam HQ
 
-Do this yourself. Ask the human only for **secrets**. No ngrok. No extra routines.
+Do this yourself. Ask the human only for **secrets**. No extra routines.
 
 ## You need two secrets from the human
 
 1. **Roam token** — PAT `rmp-…` (personal: only the DM with the bot, not the owner's other DMs) or API key `rmk-…` (org bot). Secret-request it. Never echo it.
 2. **Routine URL + sender key** — after you create the webhook routine, the panel often does not give you the key. Ask them to paste both from that routine’s panel once. Never echo the key.
 
-If they do not have a token yet: tell them **User Settings → Developer → Create Personal Access Token** (Chat Send + Chat Read; Chat Send includes file upload), or an admin **API Key** with `chat:send_message`, `chat:read`, `chat:history`, `group:read`, `webhook:write`, `item:write`. Then secret-request it.
+If they do not have a token yet: tell them **User Settings → Developer → Create Personal Access Token** (Chat Send, Chat Read, and Meetings Read; Chat Send includes file upload and reactions), or an admin **API Key** with `chat:send_message`, `chat:read`, `chat:history`, `group:read`, `webhook:write`, `item:write`, `meetings:read`. Then secret-request it.
 
 ## Do this in order
 
@@ -34,6 +34,12 @@ Then:
 ```
 npx @roamhq/grokbot subscribe --url <routine-url> --token <sender-key>
 ```
+
+Add Roam MCP with the **same token** (do not start a second OAuth login, do not echo the token):
+
+> Add a custom MCP server called roam at https://api.ro.am/mcp with header Authorization: Bearer <token>
+
+Say **custom server**. Enable it for this Bot. Meetings, transcripts, and emoji reactions go through that MCP server (`meeting_search`, `meeting_transcript`, `meeting_prompt`, `reaction_add`, `reaction_list`, `reaction_remove`). Do not add those commands to grokbot-roam.
 
 Org: tell them to add the bot under **Group Settings**. Personal bots cannot join groups.
 

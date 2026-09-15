@@ -13,5 +13,11 @@ describe("onboardPlaybook", () => {
     assert.match(text, /--download-dir/);
     assert.match(text, /--asset-id/);
     assert.match(text, /roam-chat/);
+    assert.match(text, /Meetings Read/);
+    assert.match(text, /meetings:read/);
+    assert.match(text, /custom MCP server called roam/);
+    assert.match(text, /meeting_search/);
+    assert.match(text, /reaction_add/);
+    assert.match(text, /history\?/);
   });
 });

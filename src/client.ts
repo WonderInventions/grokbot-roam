@@ -314,12 +314,13 @@ export class RoamClient {
 
   async chatHistory(
     chatId: string,
-    opts: { limit?: number; threadTimestamp?: number } = {},
+    opts: { limit?: number; threadTimestamp?: number; expand?: string } = {},
   ): Promise<Record<string, unknown>> {
     return this.request("GET", "/chat.history", undefined, {
       chatId,
       limit: opts.limit,
       threadTimestamp: opts.threadTimestamp,
+      expand: opts.expand,
     });
   }
 
