@@ -41,17 +41,19 @@ Drop (silence) when:
 - PAT / personal: `userId` is not the owner
 - mention required: group message without `<@botUuid>`
 
-`threadTimestamp` is the inbound thread, or for groups the inbound `timestamp` so the reply starts a thread.
+`threadTimestamp` on the handle-wake result is for **reply** and **typing**: inbound thread, or for a top-level group message the inbound `timestamp` so the reply *starts* a thread. Do not copy that field into `history`.
 
 The webhook body is the **new** message. grokbot-roam does not know what is already in this Grok session and does not track `chatId`s.
 
 Call `history` only when you need prior messages that are **not** already in this conversation (you don't remember this chat, the user refers to something earlier you don't have, or you want names/reactions around the inbound post):
 
 ```
-npx @roamhq/grokbot history --chat-id <chatId> [--thread-timestamp <threadTimestamp>]
+npx @roamhq/grokbot history --chat-id <chatId>
 ```
 
-Do **not** fetch history on every back-and-forth. That pastes the same transcript again and grows as n^2.
+Pass `--thread-timestamp` only when the **webhook payload** already had `threadTimestamp` (an existing thread). A new group @mention and a DM have no thread yet — omit the flag so you get the chat, not an empty new thread.
+
+The JSON includes `addresses` (display names for senders and mentioned IDs) when present. Do **not** fetch history on every back-and-forth. That pastes the same transcript again and grows as n^2.
 
 ## 3. Reply
 

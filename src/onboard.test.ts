@@ -21,5 +21,7 @@ describe("onboardPlaybook", () => {
     assert.match(text, /n\^2/);
     assert.match(text, /does not track `chatId`s/);
     assert.match(text, /Call `history` only when you need prior messages/);
+    assert.match(text, /Pass `--thread-timestamp` only when the \*\*webhook payload\*\*/);
+    assert.match(text, /meeting_info/);
   });
 });

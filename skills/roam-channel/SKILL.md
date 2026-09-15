@@ -39,7 +39,7 @@ Add Roam MCP with the **same token** (do not start a second OAuth login, do not 
 
 > Add a custom MCP server called roam at https://api.ro.am/mcp with header Authorization: Bearer <token>
 
-Say **custom server**. Enable it for this Bot. Meetings, transcripts, and emoji reactions go through that MCP server (`meeting_search`, `meeting_transcript`, `meeting_prompt`, `reaction_add`, `reaction_list`, `reaction_remove`). Do not add those commands to grokbot-roam.
+Say **custom server**. Enable it for this Bot. Meetings, transcripts, and emoji reactions go through that MCP server (`meeting_search`, `meeting_info`, `meeting_transcript`, `meeting_prompt`, `reaction_add`, `reaction_list`, `reaction_remove`). Do not add those commands to grokbot-roam.
 
 Org: tell them to add the bot under **Group Settings**. Personal bots cannot join groups.
 
