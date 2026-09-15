@@ -43,15 +43,15 @@ Drop (silence) when:
 
 `threadTimestamp` is the inbound thread, or for groups the inbound `timestamp` so the reply starts a thread.
 
-The webhook body is the **new** message. This routine conversation may already contain earlier wakes for the same chat. Do **not** fetch `chat.history` on every back-and-forth — that pastes the same transcript again and grows as n^2.
+The webhook body is the **new** message. grokbot-roam does not know what is already in this Grok session and does not track `chatId`s.
 
-- First wake for this `chatId` in this session (or you are not sure): fetch once
+Call `history` only when you need prior messages that are **not** already in this conversation (you don't remember this chat, the user refers to something earlier you don't have, or you want names/reactions around the inbound post):
 
 ```
 npx @roamhq/grokbot history --chat-id <chatId> [--thread-timestamp <threadTimestamp>]
 ```
 
-- Later wakes for the same `chatId`: use the new message plus what you already have. Do not call `history` again.
+Do **not** fetch history on every back-and-forth. That pastes the same transcript again and grows as n^2.
 
 ## 3. Reply
 

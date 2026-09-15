@@ -19,6 +19,7 @@ describe("onboardPlaybook", () => {
     assert.match(text, /meeting_search/);
     assert.match(text, /reaction_add/);
     assert.match(text, /n\^2/);
-    assert.match(text, /Do not call `history` again/);
+    assert.match(text, /does not track `chatId`s/);
+    assert.match(text, /Call `history` only when you need prior messages/);
   });
 });
