@@ -31,7 +31,7 @@ npx @roamhq/grokbot handle-wake --download-dir /workspace/roam-in/<timestamp>
 Stdin = the webhook JSON. Stdout = one JSON object:
 
 - `{ "action": "silence", "reason": "…" }` — **do nothing**. Do not post. Do not typing.
-- `{ "action": "reply", "chatId", "threadTimestamp", "replyTo", "textHint", "items?", "history?", "historyError?" }` — answer.
+- `{ "action": "reply", "chatId", "threadTimestamp", "replyTo", "textHint", "items?" }` — answer.
 
 Drop (silence) when:
 
@@ -43,11 +43,15 @@ Drop (silence) when:
 
 `threadTimestamp` is the inbound thread, or for groups the inbound `timestamp` so the reply starts a thread.
 
-`history` is `chat.history` for this DM, or this group thread (recent messages, plus `addresses` when present). **Read it before answering.** Do not skip it. If `historyError` is set, fall back to:
+The webhook body is the **new** message. This routine conversation may already contain earlier wakes for the same chat. Do **not** fetch `chat.history` on every back-and-forth — that pastes the same transcript again and grows as n^2.
+
+- First wake for this `chatId` in this session (or you are not sure): fetch once
 
 ```
 npx @roamhq/grokbot history --chat-id <chatId> [--thread-timestamp <threadTimestamp>]
 ```
+
+- Later wakes for the same `chatId`: use the new message plus what you already have. Do not call `history` again.
 
 ## 3. Reply
 

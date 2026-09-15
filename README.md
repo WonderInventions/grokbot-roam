@@ -70,7 +70,7 @@ npx @roamhq/grokbot reply --chat-id <uuid> --text-file <path> [--thread-timestam
 npx @roamhq/grokbot send --chat-id <uuid> --text-file <path> [--thread-timestamp N]
 npx @roamhq/grokbot typing --chat-id <uuid> [--thread-timestamp N]
 npx @roamhq/grokbot history --chat-id <uuid> [--limit N] [--thread-timestamp N]
-npx @roamhq/grokbot handle-wake    # webhook JSON on stdin → {action: reply|silence, …} (reply includes chat.history)
+npx @roamhq/grokbot handle-wake    # webhook JSON on stdin → {action: reply|silence, …}
 ```
 
 `subscribe` POSTs `/v1/webhook.subscribe` with `destination: { type: "grok_bot", token }`
@@ -79,9 +79,9 @@ so Roam can push to the routine instead of a public HTTPS URL.
 `handle-wake` accepts the v1 envelope or bare `data`. It drops self-echo, edits,
 deletes, PAT non-owners, and (when mention is required) group messages that do
 not `<@botUuid>`. A reply action includes `threadTimestamp` (inbound thread, or
-the inbound timestamp in groups so the bot starts a thread) and `history`
-(`chat.history` for that DM or thread). Meetings and reactions go through Roam
-MCP with the same token — not this CLI.
+the inbound timestamp in groups so the bot starts a thread). The inbound skill
+fetches `chat.history` once per chat in a session — not on every wake.
+Meetings and reactions go through Roam MCP with the same token — not this CLI.
 
 ## Development
 

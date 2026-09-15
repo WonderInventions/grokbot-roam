@@ -11,7 +11,7 @@ import {
   shouldRequireMention,
   type Config,
 } from "./config.js";
-import { attachChatHistory, handleWake } from "./handle-wake.js";
+import { handleWake } from "./handle-wake.js";
 import { contentTypeForFilename, downloadWakeItems } from "./items.js";
 import { identityFromTokenInfo, type Identity } from "./identity.js";
 import { expandSoftBreaks } from "./markdown.js";
@@ -356,8 +356,9 @@ async function cmdHistory(argv: string[]): Promise<void> {
   const client = clientFromConfig(config);
   try {
     const result = await client.chatHistory(flags["chat-id"], {
-      limit: intFlag(flags.limit, "--limit"),
+      limit: intFlag(flags.limit, "--limit") ?? 50,
       threadTimestamp: intFlag(flags["thread-timestamp"], "--thread-timestamp"),
+      expand: "addresses",
     });
     printJson(result);
   } catch (err) {
@@ -399,9 +400,9 @@ async function cmdHandleWake(argv: string[]): Promise<void> {
     fail(msg);
   }
 
-  const client = clientFromConfig(config);
   let identity = config.identity;
   if (!identity) {
+    const client = clientFromConfig(config);
     try {
       identity = identityFromTokenInfo(await client.tokenInfo());
     } catch (err) {
@@ -413,14 +414,9 @@ async function cmdHandleWake(argv: string[]): Promise<void> {
     saveConfig({ ...config, identity });
   }
 
-  let action = handleWake(payload, identity, {
+  const action = handleWake(payload, identity, {
     requireMention: shouldRequireMention(config, identity),
   });
-  if (action.action === "reply") {
-    action = await attachChatHistory(action, (chatId, opts) =>
-      client.chatHistory(chatId, opts),
-    );
-  }
   if (
     action.action === "reply" &&
     flags["download-dir"] &&

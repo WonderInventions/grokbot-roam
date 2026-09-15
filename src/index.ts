@@ -5,11 +5,8 @@ export {
   wasBotMentioned,
 } from "./markdown.js";
 export {
-  attachChatHistory,
   handleWake,
   unwrapWebhookEnvelope,
-  WAKE_HISTORY_LIMIT,
-  type ChatHistoryFn,
   type HandleWakeOptions,
   type ReplyAction,
   type SilenceAction,

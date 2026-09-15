@@ -1,11 +1,6 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import {
-  attachChatHistory,
-  handleWake,
-  unwrapWebhookEnvelope,
-  WAKE_HISTORY_LIMIT,
-} from "./handle-wake.js";
+import { handleWake, unwrapWebhookEnvelope } from "./handle-wake.js";
 import { identityFromTokenInfo, type Identity } from "./identity.js";
 
 const BOT_ID = "11111111-1111-4111-8111-111111111111";
@@ -325,86 +320,5 @@ describe("handleWake", () => {
       return;
     }
     assert.equal(r.textHint, "yo");
-  });
-});
-
-describe("attachChatHistory", () => {
-  it("leaves silence wakes unchanged and does not fetch", async () => {
-    let called = 0;
-    const out = await attachChatHistory(
-      { action: "silence", reason: "self-echo" },
-      async () => {
-        called += 1;
-        return {};
-      },
-    );
-    assert.equal(called, 0);
-    assert.deepEqual(out, { action: "silence", reason: "self-echo" });
-  });
-
-  it("attaches history for a DM (no threadTimestamp)", async () => {
-    const calls: unknown[] = [];
-    const history = { chatId: CHAT_ID, messages: [{ text: "earlier" }] };
-    const reply = handleWake(
-      msg({ userId: OWNER_ID, chatType: "dm", text: "yo" }),
-      pat,
-    );
-    assert.equal(reply.action, "reply");
-    const out = await attachChatHistory(reply, async (chatId, opts) => {
-      calls.push({ chatId, opts });
-      return history;
-    });
-    assert.deepEqual(calls, [
-      {
-        chatId: CHAT_ID,
-        opts: { limit: WAKE_HISTORY_LIMIT, threadTimestamp: undefined, expand: "addresses" },
-      },
-    ]);
-    assert.equal(out.action, "reply");
-    if (out.action !== "reply") {
-      return;
-    }
-    assert.deepEqual(out.history, history);
-    assert.equal(out.historyError, undefined);
-  });
-
-  it("passes the group thread timestamp into history", async () => {
-    const reply = handleWake(
-      msg({
-        chatType: "group",
-        userId: OTHER_ID,
-        timestamp: 100,
-        text: `<@${BOT_ID}> yo`,
-      }),
-      org,
-      { requireMention: true },
-    );
-    assert.equal(reply.action, "reply");
-    if (reply.action !== "reply") {
-      return;
-    }
-    assert.equal(reply.threadTimestamp, 100);
-    let threadTimestamp: number | undefined;
-    await attachChatHistory(reply, async (_chatId, opts) => {
-      threadTimestamp = opts.threadTimestamp;
-      return { chatId: CHAT_ID, messages: [] };
-    });
-    assert.equal(threadTimestamp, 100);
-  });
-
-  it("records historyError and still replies when fetch fails", async () => {
-    const reply = handleWake(
-      msg({ userId: OWNER_ID, chatType: "dm", text: "yo" }),
-      pat,
-    );
-    const out = await attachChatHistory(reply, async () => {
-      throw new Error("Roam API 403: missing_scope");
-    });
-    assert.equal(out.action, "reply");
-    if (out.action !== "reply") {
-      return;
-    }
-    assert.equal(out.history, undefined);
-    assert.equal(out.historyError, "Roam API 403: missing_scope");
   });
 });

@@ -18,6 +18,7 @@ describe("onboardPlaybook", () => {
     assert.match(text, /custom MCP server called roam/);
     assert.match(text, /meeting_search/);
     assert.match(text, /reaction_add/);
-    assert.match(text, /history\?/);
+    assert.match(text, /n\^2/);
+    assert.match(text, /Do not call `history` again/);
   });
 });
