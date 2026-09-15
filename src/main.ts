@@ -12,6 +12,7 @@ import {
   type Config,
 } from "./config.js";
 import { handleWake } from "./handle-wake.js";
+import { contentTypeForFilename, downloadWakeItems } from "./items.js";
 import { identityFromTokenInfo, type Identity } from "./identity.js";
 import { expandSoftBreaks } from "./markdown.js";
 import { redact } from "./redact.js";
@@ -28,12 +29,14 @@ Usage:
                          [--event chat.message] [--mention | --no-mention]
                          [--chat-type dm|group]
   grokbot-roam unsubscribe --id <uuid>
-  grokbot-roam reply --chat-id <uuid> [--text <md> | --text - | --text-file <path>]
-                     [--thread-timestamp N] [--reply-to N]
-  grokbot-roam send --chat-id <uuid> [--text <md> | --text - | --text-file <path>] [--thread-timestamp N]
+  grokbot-roam reply --chat-id <uuid> [--text-file <path> | --text -]
+                     [--asset-id <uuid> ...] [--thread-timestamp N] [--reply-to N]
+  grokbot-roam send --chat-id <uuid> [--text-file <path> | --text -]
+                    [--asset-id <uuid> ...] [--thread-timestamp N]
+  grokbot-roam upload --file <path>
   grokbot-roam typing --chat-id <uuid> [--thread-timestamp N]
   grokbot-roam history --chat-id <uuid> [--limit N] [--thread-timestamp N]
-  grokbot-roam handle-wake
+  grokbot-roam handle-wake [--download-dir <path>]
 
 Config: ~/.grokbot-roam/config.json (mode 0600). Tokens are never logged.
 `;
@@ -246,6 +249,7 @@ async function cmdReply(argv: string[], kind: "reply" | "send"): Promise<void> {
     "text-file": { type: "string" },
     "thread-timestamp": { type: "string" },
     "reply-to": { type: "string" },
+    "asset-id": { type: "string", multiple: true },
   });
   if (!flags["chat-id"]) {
     fail(`${kind} requires --chat-id <uuid>`);
@@ -253,6 +257,7 @@ async function cmdReply(argv: string[], kind: "reply" | "send"): Promise<void> {
   if (flags.text !== undefined && flags["text-file"]) {
     fail(`${kind}: use --text or --text-file, not both`);
   }
+  const assetIds = flags["asset-id"] ?? [];
   let rawText: string | undefined;
   if (flags["text-file"]) {
     const { readFileSync } = await import("node:fs");
@@ -262,19 +267,17 @@ async function cmdReply(argv: string[], kind: "reply" | "send"): Promise<void> {
   } else {
     rawText = flags.text;
   }
-  if (rawText === undefined) {
-    fail(`${kind} requires --text <md>, --text -, or --text-file <path>`);
-  }
-  if (!rawText) {
-    fail(`${kind} requires non-empty markdown`);
+  if ((rawText === undefined || rawText === "") && assetIds.length === 0) {
+    fail(`${kind} requires --text-file, --text -, or --asset-id`);
   }
   const config = loadConfig();
   const client = clientFromConfig(config);
-  const text = expandSoftBreaks(rawText);
+  const text = rawText ? expandSoftBreaks(rawText) : "";
   try {
     const result = await client.chatPost({
       chatId: flags["chat-id"],
-      text,
+      text: text || undefined,
+      assetIds: assetIds.length ? assetIds : undefined,
       threadTimestamp: intFlag(flags["thread-timestamp"], "--thread-timestamp"),
       replyTimestamp: kind === "reply" ? intFlag(flags["reply-to"], "--reply-to") : undefined,
     });
@@ -282,6 +285,40 @@ async function cmdReply(argv: string[], kind: "reply" | "send"): Promise<void> {
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     fail(`chat.post failed: ${msg}`, config.token);
+  }
+}
+
+async function cmdUpload(argv: string[]): Promise<void> {
+  const flags = parseFlags(argv, {
+    file: { type: "string" },
+  });
+  if (!flags.file) {
+    fail("upload requires --file <path>");
+  }
+  const { readFileSync, statSync } = await import("node:fs");
+  const { basename } = await import("node:path");
+  let bytes: Buffer;
+  try {
+    bytes = readFileSync(flags.file);
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    fail(`could not read file: ${msg}`);
+  }
+  const name = basename(flags.file);
+  const config = loadConfig();
+  const client = clientFromConfig(config);
+  try {
+    const instruction = await client.assetCreate({ name, size: statSync(flags.file).size });
+    await client.uploadAssetBytes(instruction, bytes);
+    printJson({
+      assetId: instruction.assetId,
+      name,
+      size: bytes.byteLength,
+      contentType: contentTypeForFilename(name),
+    });
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    fail(`asset.create/upload failed: ${msg}`, config.token);
   }
 }
 
@@ -337,7 +374,10 @@ async function readStdin(): Promise<string> {
   return Buffer.concat(chunks).toString("utf8");
 }
 
-async function cmdHandleWake(): Promise<void> {
+async function cmdHandleWake(argv: string[]): Promise<void> {
+  const flags = parseFlags(argv, {
+    "download-dir": { type: "string" },
+  });
   const raw = await readStdin();
   if (!raw.trim()) {
     printJson({ action: "silence", reason: "empty_body" });
@@ -376,6 +416,15 @@ async function cmdHandleWake(): Promise<void> {
   const action = handleWake(payload, identity, {
     requireMention: shouldRequireMention(config, identity),
   });
+  if (
+    action.action === "reply" &&
+    flags["download-dir"] &&
+    action.items?.length
+  ) {
+    action.items = await downloadWakeItems(action.items, flags["download-dir"], {
+      token: config.token,
+    });
+  }
   printJson(action);
 }
 
@@ -413,6 +462,9 @@ export async function main(argv = process.argv.slice(2)): Promise<number> {
       case "send":
         await cmdReply(argv.slice(1), "send");
         return 0;
+      case "upload":
+        await cmdUpload(argv.slice(1));
+        return 0;
       case "typing":
         await cmdTyping(argv.slice(1));
         return 0;
@@ -420,7 +472,7 @@ export async function main(argv = process.argv.slice(2)): Promise<number> {
         await cmdHistory(argv.slice(1));
         return 0;
       case "handle-wake":
-        await cmdHandleWake();
+        await cmdHandleWake(argv.slice(1));
         return 0;
       default:
         console.error(`unknown command: ${cmd}`);

@@ -74,13 +74,21 @@ export class RoamAPIError extends Error {
 
 export type ChatPostOptions = {
   chatId: string;
-  text: string;
+  text?: string;
   threadTimestamp?: number;
   replyTimestamp?: number;
   /** @deprecated Use replyTimestamp. Mapped if replyTimestamp is omitted. */
   replyTo?: number;
   markdown?: boolean;
   sync?: boolean;
+  assetIds?: string[];
+};
+
+export type AssetCreateInstruction = {
+  assetId: string;
+  uploadUrl: string;
+  uploadMethod: string;
+  uploadHeaders: Record<string, string>;
 };
 
 export type SubscribeOptions = {
@@ -123,6 +131,11 @@ function assertTextSize(text: string): void {
       `Message text is ${bytes} bytes; Roam cap is ${MAX_MESSAGE_TEXT_SIZE}`,
     );
   }
+}
+
+function isAssetProcessingError(err: unknown): boolean {
+  const msg = err instanceof Error ? err.message : String(err);
+  return /process/i.test(msg);
 }
 
 export class RoamClient {
@@ -211,13 +224,25 @@ export class RoamClient {
   }
 
   async chatPost(opts: ChatPostOptions): Promise<Record<string, unknown>> {
-    assertTextSize(opts.text);
+    const text = opts.text ?? "";
+    const assetIds = opts.assetIds?.filter(Boolean) ?? [];
+    if (!text && assetIds.length === 0) {
+      throw new Error("chatPost requires text or assetIds");
+    }
+    if (text) {
+      assertTextSize(text);
+    }
     const body: Record<string, unknown> = {
       chatId: opts.chatId,
-      text: opts.text,
       markdown: opts.markdown ?? true,
       sync: opts.sync ?? true,
     };
+    if (text) {
+      body.text = text;
+    }
+    if (assetIds.length) {
+      body.assetIds = assetIds;
+    }
     if (opts.threadTimestamp !== undefined) {
       body.threadTimestamp = opts.threadTimestamp;
     }
@@ -228,7 +253,52 @@ export class RoamClient {
     if (replyTimestamp !== undefined) {
       body.replyTimestamp = replyTimestamp;
     }
-    return this.request("POST", "/chat.post", body);
+    let lastErr: unknown;
+    for (let attempt = 0; attempt < 8; attempt++) {
+      try {
+        return await this.request("POST", "/chat.post", body);
+      } catch (err) {
+        lastErr = err;
+        if (!assetIds.length || !isAssetProcessingError(err) || attempt === 7) {
+          throw err;
+        }
+        await new Promise((r) => setTimeout(r, 500 * (attempt + 1)));
+      }
+    }
+    throw lastErr instanceof Error ? lastErr : new Error("chat.post failed");
+  }
+
+  async assetCreate(opts: { name: string; size: number }): Promise<AssetCreateInstruction> {
+    const data = await this.request("POST", "/asset.create", {
+      name: opts.name,
+      size: opts.size,
+      purpose: "file",
+    });
+    const assetId = typeof data.assetId === "string" ? data.assetId : "";
+    const uploadUrl = typeof data.uploadUrl === "string" ? data.uploadUrl : "";
+    const uploadMethod = typeof data.uploadMethod === "string" ? data.uploadMethod : "POST";
+    const uploadHeaders =
+      data.uploadHeaders && typeof data.uploadHeaders === "object" && !Array.isArray(data.uploadHeaders)
+        ? (data.uploadHeaders as Record<string, string>)
+        : {};
+    if (!assetId || !uploadUrl) {
+      throw new Error("asset.create did not return assetId and uploadUrl");
+    }
+    return { assetId, uploadUrl, uploadMethod, uploadHeaders };
+  }
+
+  async uploadAssetBytes(instruction: AssetCreateInstruction, bytes: Buffer): Promise<void> {
+    const method = instruction.uploadMethod || "POST";
+    const resp = await this.fetchImpl(instruction.uploadUrl, {
+      method,
+      headers: instruction.uploadHeaders,
+      body: new Uint8Array(bytes),
+      signal: AbortSignal.timeout(this.timeoutMs * 4),
+    });
+    if (!resp.ok) {
+      const text = await resp.text();
+      throw new RoamAPIError(resp.status, text);
+    }
   }
 
   async chatTyping(

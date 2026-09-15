@@ -25,13 +25,13 @@ or the bare `data` object (`chatId`, `userId`, `timestamp`, `text`, `chatType`, 
 Pipe the JSON to handle-wake (preferred) or apply the same rules yourself:
 
 ```
-npx @roamhq/grokbot handle-wake
+npx @roamhq/grokbot handle-wake --download-dir /workspace/roam-in/<timestamp>
 ```
 
 Stdin = the webhook JSON. Stdout = one JSON object:
 
 - `{ "action": "silence", "reason": "…" }` — **do nothing**. Do not post. Do not typing.
-- `{ "action": "reply", "chatId", "threadTimestamp", "replyTo", "textHint" }` — answer.
+- `{ "action": "reply", "chatId", "threadTimestamp", "replyTo", "textHint", "items?" }` — answer.
 
 Drop (silence) when:
 
@@ -59,7 +59,16 @@ npx @roamhq/grokbot typing --chat-id <chatId> [--thread-timestamp <threadTimesta
 npx @roamhq/grokbot reply --chat-id <chatId> --text-file /workspace/roam-reply.md [--thread-timestamp <N>] [--reply-to <N>]
 ```
 
-Pass through `threadTimestamp` and `replyTo` from handle-wake. `textHint` is the inbound text with the bot mention stripped. If `threadTimestamp` is set, fetch that thread with `history --thread-timestamp` before answering. Do not call `send` for an inbound turn; `reply` sets `replyTimestamp` on the inbound post.
+Pass through `threadTimestamp` and `replyTo` from handle-wake. `textHint` is the inbound text with the bot mention stripped — it may be empty if the user only sent a file. If `items` is present, open each `localPath` (look at photos; read blobs) before answering. If `threadTimestamp` is set, fetch that thread with `history --thread-timestamp` before answering.
+
+To send an image or file back: write it to disk, then:
+
+```
+npx @roamhq/grokbot upload --file /workspace/out.png
+npx @roamhq/grokbot reply --chat-id <chatId> --text-file /workspace/roam-reply.md --asset-id <assetId> [--thread-timestamp <N>] [--reply-to <N>]
+```
+
+`upload` prints `{ "assetId": "…" }`. Repeat `--asset-id` for multiple files. Caption via `--text-file` may be omitted only when there is at least one `--asset-id`. Do not call `send` for an inbound turn; `reply` sets `replyTimestamp` on the inbound post.
 
 ## 4. Hard rules
 

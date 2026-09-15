@@ -145,4 +145,76 @@ describe("RoamClient.chatPost", () => {
       replyTimestamp: 9,
     });
   });
+
+  it("posts assetIds from asset.create", async () => {
+    const bodies: unknown[] = [];
+    const fetchMock: FetchLike = async (_input, init) => {
+      bodies.push(JSON.parse(String(init?.body)));
+      return new Response("{}", { status: 200, headers: { "content-type": "application/json" } });
+    };
+    const client = new RoamClient({ token: "rmk-test", fetch: fetchMock });
+    await client.chatPost({
+      chatId: "c1",
+      text: "pic",
+      assetIds: ["9b1c2d3e-4f50-6a7b-8c9d-0e1f2a3b4c5d"],
+    });
+    assert.deepEqual(bodies[0], {
+      chatId: "c1",
+      text: "pic",
+      markdown: true,
+      sync: true,
+      assetIds: ["9b1c2d3e-4f50-6a7b-8c9d-0e1f2a3b4c5d"],
+    });
+  });
+
+  it("allows assetIds without text", async () => {
+    const bodies: unknown[] = [];
+    const fetchMock: FetchLike = async (_input, init) => {
+      bodies.push(JSON.parse(String(init?.body)));
+      return new Response("{}", { status: 200, headers: { "content-type": "application/json" } });
+    };
+    const client = new RoamClient({ token: "rmk-test", fetch: fetchMock });
+    await client.chatPost({
+      chatId: "c1",
+      assetIds: ["9b1c2d3e-4f50-6a7b-8c9d-0e1f2a3b4c5d"],
+    });
+    const body = bodies[0] as Record<string, unknown>;
+    assert.equal("text" in body, false);
+    assert.deepEqual(body.assetIds, ["9b1c2d3e-4f50-6a7b-8c9d-0e1f2a3b4c5d"]);
+  });
+});
+
+describe("RoamClient.assetCreate", () => {
+  it("POSTs JSON then uploads raw bytes with instruction headers", async () => {
+    const calls: { url: string; method?: string; headers?: Headers; body?: unknown }[] = [];
+    const fetchMock: FetchLike = async (input, init) => {
+      const url = String(input);
+      calls.push({
+        url,
+        method: init?.method,
+        headers: new Headers(init?.headers),
+        body: init?.body,
+      });
+      if (url.endsWith("/asset.create")) {
+        return new Response(
+          JSON.stringify({
+            assetId: "asset-1",
+            uploadUrl: "https://uploads.example/put",
+            uploadMethod: "POST",
+            uploadHeaders: { Authorization: "Bearer upload-tok", "Upload-Complete": "?1" },
+          }),
+          { status: 200, headers: { "content-type": "application/json" } },
+        );
+      }
+      return new Response("", { status: 200 });
+    };
+    const client = new RoamClient({ token: "rmk-test", fetch: fetchMock });
+    const inst = await client.assetCreate({ name: "shot.png", size: 4 });
+    await client.uploadAssetBytes(inst, Buffer.from("abcd"));
+    assert.equal(calls[0]?.url, "https://api.ro.am/v1/asset.create");
+    assert.equal(JSON.parse(String(calls[0]?.body)).purpose, "file");
+    assert.equal(calls[1]?.url, "https://uploads.example/put");
+    assert.equal(calls[1]?.headers?.get("Authorization"), "Bearer upload-tok");
+    assert.equal(calls[1]?.headers?.get("Upload-Complete"), "?1");
+  });
 });
