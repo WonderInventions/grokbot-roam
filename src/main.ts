@@ -356,8 +356,9 @@ async function cmdHistory(argv: string[]): Promise<void> {
   const client = clientFromConfig(config);
   try {
     const result = await client.chatHistory(flags["chat-id"], {
-      limit: intFlag(flags.limit, "--limit"),
+      limit: intFlag(flags.limit, "--limit") ?? 50,
       threadTimestamp: intFlag(flags["thread-timestamp"], "--thread-timestamp"),
+      expand: "addresses",
     });
     printJson(result);
   } catch (err) {

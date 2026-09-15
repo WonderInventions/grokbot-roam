@@ -79,7 +79,10 @@ so Roam can push to the routine instead of a public HTTPS URL.
 `handle-wake` accepts the v1 envelope or bare `data`. It drops self-echo, edits,
 deletes, PAT non-owners, and (when mention is required) group messages that do
 not `<@botUuid>`. A reply action includes `threadTimestamp` (inbound thread, or
-the inbound timestamp in groups so the bot starts a thread).
+the inbound timestamp in groups so the bot starts a thread). The Bot calls
+`history` when it needs prior messages that are not already in the Grok
+session — the CLI does not track chats. Meetings and reactions go through
+Roam MCP with the same token — not this CLI.
 
 ## Development
 
